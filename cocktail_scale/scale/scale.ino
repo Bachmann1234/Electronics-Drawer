@@ -14,7 +14,7 @@
 #define SCALE_CLOCK_PIN 3
 #define SCALE_CALIBRATION_SCALE 454.78
 #define SCALE_CALIBRATION_OFFSET 4632
-#define FLUID_OZ_IN_GRAM 0.033814
+#define OZ_IN_GRAM 0.0353
 
 HX711 scale;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -50,7 +50,7 @@ void loop() {
   }
   lastButtonVal = buttonVal;
   float grams = round(scale.get_units(10));
-  drawReading(grams * FLUID_OZ_IN_GRAM);
+  drawReading(grams * OZ_IN_GRAM);
 }
 
 
