@@ -39,7 +39,8 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
-
+  
+  scale.tare();
 
 }
 
