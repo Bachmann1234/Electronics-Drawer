@@ -49,21 +49,18 @@ void loop() {
     scale.tare();
   }
   lastButtonVal = buttonVal;
-  float grams = scale.get_units(10);
-  if ( grams < 0 && grams > -.05) {
-    grams = 0;
-  }
-  drawReading(grams);
+  float grams = round(scale.get_units(10));
+  drawReading(grams * FLUID_OZ_IN_GRAM);
 }
 
 
 
-void drawReading(float grams) {
+void drawReading(float fluidOz) {
+  int textSize = fluidOz < 100 ? 4 : 3;
   display.clearDisplay();
-  display.setTextSize(2);
+  display.setTextSize(textSize);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(24, 20);
-  display.print(grams, 1);
-  display.print("g");
+  display.println(fluidOz, 1);
   display.display();
 }
