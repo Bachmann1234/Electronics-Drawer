@@ -64,6 +64,6 @@ void drawReading(float fluidOz) {
   display.setTextSize(textSize);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(24, 20);
-  display.println(fluidOz, 1);
+  display.println(fluidOz, 2);
   display.display();
 }
