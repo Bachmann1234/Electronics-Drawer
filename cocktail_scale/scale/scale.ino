@@ -13,7 +13,7 @@
 #define SCALE_DATA_PIN 2
 #define SCALE_CLOCK_PIN 3
 #define SCALE_CALIBRATION_SCALE 455.25
-#define SCALE_CALIBRATION_OFFSET 4078
+#define SCALE_CALIBRATION_OFFSET 5585
 #define FLUID_OZ_IN_GRAM 0.033814
 
 HX711 scale;
@@ -57,6 +57,9 @@ void loop() {
 
 void drawReading(float fluidOz) {
   int textSize = fluidOz < 100 ? 4 : 3;
+  if(fluidOz < .01) {
+    fluidOz = 0;
+  }
   display.clearDisplay();
   display.setTextSize(textSize);
   display.setTextColor(SSD1306_WHITE);
