@@ -56,7 +56,7 @@ void loop() {
 
 
 void drawReading(float fluidOz) {
-  int textSize = fluidOz < 100 ? 4 : 3;
+  int textSize = fluidOz < 100 ? 3 : 2;
   if(fluidOz < .01) {
     fluidOz = 0;
   }
