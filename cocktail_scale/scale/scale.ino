@@ -56,15 +56,15 @@ void loop() {
 
 
 
-void drawReading(float fluidOz) {
-  int textSize = fluidOz < 100 ? 3 : 2;
-  if(fluidOz < .01) {
-    fluidOz = 0;
+void drawReading(float oz) {
+  int textSize = oz < 100 ? 3 : 2;
+  if(oz < .01 && oz > .01) {
+    oz = 0;
   }
   display.clearDisplay();
   display.setTextSize(textSize);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(24, 20);
-  display.println(fluidOz, 2);
+  display.println(oz, 2);
   display.display();
 }
