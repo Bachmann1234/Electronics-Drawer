@@ -1,4 +1,5 @@
 import random
+import argparse
 from dataclasses import dataclass
 import requests
 
@@ -8,6 +9,11 @@ class Art:
     artist_name: str
     art_url: str
     image_url: str
+
+
+class Deviantart:
+    def grab_art(self) -> Art:
+        return Art("", "", "")
 
 
 class Metropolitan:
@@ -51,7 +57,22 @@ class Metropolitan:
 
 
 def main():
-    print(Metropolitan().grab_art())
+    parser = argparse.ArgumentParser(
+        description="Tell me the source you want me to grab from"
+    )
+    parser.add_argument(
+        "--source",
+        choices=["metro", "deviant"],
+        help="Where should I grab the art from",
+    )
+    parsed_args = parser.parse_args()
+    sources = {"metro": Metropolitan(), "deviant": Deviantart()}
+    art_source = sources[
+        parsed_args.source
+        if parsed_args.source
+        else random.choice(list(sources.keys()))
+    ]
+    print(art_source.grab_art())
 
 
 if __name__ == "__main__":
