@@ -1,4 +1,12 @@
-# Arduino Drawer
+# Electronics Drawer
 
-Place for misc arduino projects. I dont expect much here to be useful to others. If
-any project gets to a signficant size or I want to share it more explicitly ill move it out of this repo
+Repo to collect source code and other artifacts around small electronics projects
+
+## Cocktail Scale
+
+A custom kitchen scale designed for use in a bar to measure cocktail ingrediants
+
+## Giant Button
+
+Giant Keyboard switch that can be programmed to do various keyboard tricks
+
