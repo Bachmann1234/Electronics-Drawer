@@ -6,7 +6,7 @@ Repo to collect source code and other artifacts around small electronics project
 
 A custom kitchen scale designed for use in a bar to measure cocktail ingrediants
 
-![Prototype](./cocktail_scale/prototype.jpg | height=100)
+![Prototype](/cocktail_scale/prototype.jpg | height=100)
 
 ## Giant Button
 
