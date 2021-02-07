@@ -8,7 +8,7 @@ from requests.models import HTTPBasicAuth
 from font_source_serif_pro import SourceSerifProSemibold
 
 try:
-    from inky import InkyWHAT
+    from inky.auto import auto as inky_auto
 
     has_inky = True
 except ImportError:
@@ -171,7 +171,9 @@ def convert_image(img: Image) -> Image:
     return img
 
 
-def add_title_and_author(img: Image, art_selection: Art, width, height) -> Image:
+def add_footer(
+    img: Image, art_selection: Art, art_source_name: str, width, height
+) -> Image:
     draw = ImageDraw.Draw(img)
     font_size = 12
     author_font = ImageFont.truetype(SourceSerifProSemibold, font_size)
@@ -181,7 +183,7 @@ def add_title_and_author(img: Image, art_selection: Art, width, height) -> Image
     )
     draw.multiline_text(
         (5, height - 15),
-        f"'{art_selection.title.strip() or 'untitled'}' by {art_selection.artist.strip() or 'unknown'}",
+        f"'{art_selection.title.strip() or 'untitled'}' by {art_selection.artist.strip() or 'unknown'} ({art_source_name})",
         fill=(255, 255, 255, 255),
         font=author_font,
         align="left",
@@ -189,12 +191,12 @@ def add_title_and_author(img: Image, art_selection: Art, width, height) -> Image
     return img
 
 
-def draw_image(img: Image, art_selection: Art) -> None:
-    inkywhat = InkyWHAT("black")
+def draw_image(img: Image, art_selection: Art, art_source_name: str) -> None:
+    inky_board = inky_auto()
     img = convert_image(img)
-    img = add_title_and_author(img, art_selection, inkywhat.width, inkywhat.height)
-    inkywhat.set_image(img)
-    inkywhat.show()
+    add_footer(img, art_selection, art_source_name, inky_board.width, inky_board.height)
+    inky_board.set_image(img)
+    inky_board.show()
 
 
 def main():
@@ -221,12 +223,12 @@ def main():
     #     "Dog",
     #     "https://pbs.twimg.com/media/EUUsJsKXYAUC8vg?format=png&name=900x900",
     # )
-    print(art_selection.title)
-    print(art_selection.artist)
+    art_source_name = art_source.__class__.__name__
+    print(f"{art_source_name} - {art_selection.title} by {art_selection.artist}")
     print(art_selection.image_url)
     if has_inky:
         image = load_image(art_selection.image_url)
-        draw_image(image, art_selection)
+        draw_image(image, art_selection, art_source_name)
 
 
 if __name__ == "__main__":
