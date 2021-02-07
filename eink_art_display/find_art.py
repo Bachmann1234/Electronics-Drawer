@@ -1,4 +1,5 @@
 import random
+import os
 import argparse
 from dataclasses import dataclass
 import requests
@@ -6,14 +7,41 @@ import requests
 
 @dataclass
 class Art:
-    artist_name: str
-    art_url: str
+    artist: str
+    title: str
     image_url: str
 
 
 class Deviantart:
+    CLIENT_ID = os.environ["DEVIANT_ART_CLIENT_ID"]
+    CLIENT_SECRET = os.environ["DEVIANT_ART_CLIENT_SECRET"]
+    HOST = "https://www.deviantart.com"
+
+    def _get_access_token(self) -> str:
+        response = requests.post(
+            f"{self.HOST}/oauth2/token",
+            data={
+                "client_id": self.CLIENT_ID,
+                "client_secret": self.CLIENT_SECRET,
+                "grant_type": "client_credentials",
+            },
+        )
+        response.raise_for_status()
+        return response.json()["access_token"]
+
+    def _grab_random_piece(self, access_token: str) -> dict:
+        popular_pieces_response = requests.get(
+            f"https://www.deviantart.com/api/v1/oauth2/browse/popular?&limit=120&access_token={access_token}"
+        )
+        popular_pieces_response.raise_for_status()
+        return random.choice(popular_pieces_response.json()["results"])
+
     def grab_art(self) -> Art:
-        return Art("", "", "")
+        access_token = self._get_access_token()
+        piece = self._grab_random_piece(access_token)
+        return Art(
+            piece["author"]["username"], piece["title"], piece["thumbs"][-1]["src"]
+        )
 
 
 class Metropolitan:
@@ -32,8 +60,8 @@ class Metropolitan:
         object_response.raise_for_status()
         object_dict = object_response.json()
         return Art(
-            artist_name=object_dict["artistDisplayName"],
-            art_url=object_dict["objectURL"],
+            artist=object_dict["artistDisplayName"],
+            title=object_dict["title"],
             image_url=object_dict["primaryImage"],
         )
 
@@ -72,7 +100,8 @@ def main():
         if parsed_args.source
         else random.choice(list(sources.keys()))
     ]
-    print(art_source.grab_art())
+    art_seletion = art_source.grab_art()
+    print(art_seletion.image_url)
 
 
 if __name__ == "__main__":
