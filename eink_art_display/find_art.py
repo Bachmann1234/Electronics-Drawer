@@ -4,6 +4,7 @@ import argparse
 from dataclasses import dataclass
 import requests
 from PIL import Image, ImageFont, ImageDraw
+from requests.models import HTTPBasicAuth
 from font_source_serif_pro import SourceSerifProSemibold
 
 try:
@@ -20,6 +21,50 @@ class Art:
     artist: str
     title: str
     image_url: str
+
+
+class Reddit:
+    CLIENT_ID = os.environ["REDDIT_CLIENT_ID"]
+    CLIENT_SECRET = os.environ["REDDIT_CLIENT_SECRET"]
+    REDDIT_USER_AGENT = os.environ["REDDIT_USER_AGENT"]
+    HOST = "https://www.reddit.com"
+    OAUTH_HOST = "https://oauth.reddit.com"
+
+    def _get_access_token(self) -> str:
+        response = requests.post(
+            f"{self.HOST}/api/v1/access_token",
+            auth=HTTPBasicAuth(self.CLIENT_ID, self.CLIENT_SECRET),
+            data={
+                "grant_type": "client_credentials",
+            },
+            headers={"User-agent": self.REDDIT_USER_AGENT},
+        )
+        response.raise_for_status()
+        return response.json()["access_token"]
+
+    def _grab_random_piece(self, access_token: str) -> dict:
+        pieces = []
+        after = ""
+        for _ in range(10):
+            response = requests.get(
+                f"{self.OAUTH_HOST}/r/art/hot?raw_json=1&g=US&limit=100{f'&after={after}' if after else ''}",
+                headers={
+                    "Authorization": f"bearer {access_token}",
+                    "User-agent": self.REDDIT_USER_AGENT,
+                },
+            )
+            response.raise_for_status()
+            response_data = response.json()["data"]
+            after = response_data["after"]
+            pieces += response_data["children"]
+
+        piece = random.choice(pieces)
+        return piece["data"]
+
+    def grab_art(self) -> Art:
+        access_token = self._get_access_token()
+        piece = self._grab_random_piece(access_token)
+        return Art(piece["author"], piece["title"].split(",")[0], piece["url"])
 
 
 class Deviantart:
@@ -158,11 +203,11 @@ def main():
     )
     parser.add_argument(
         "--source",
-        choices=["metro", "deviant"],
+        choices=["metro", "deviant", "reddit"],
         help="Where should I grab the art from",
     )
     parsed_args = parser.parse_args()
-    sources = {"metro": Metropolitan(), "deviant": Deviantart()}
+    sources = {"metro": Metropolitan(), "deviant": Deviantart(), "reddit": Reddit()}
     art_source = sources[
         parsed_args.source
         if parsed_args.source
