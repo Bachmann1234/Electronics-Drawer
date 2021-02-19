@@ -6,9 +6,10 @@ import requests
 from PIL import Image, ImageFont, ImageDraw
 from requests.models import HTTPBasicAuth
 from font_source_serif_pro import SourceSerifProSemibold
+import hitherdither
 
 try:
-    from inky.auto import auto as inky_auto
+    from inky.inky_uc8159 import Inky
 
     has_inky = True
 except ImportError:
@@ -151,23 +152,17 @@ def load_image(image_url: str) -> Image:
     return Image.open(requests.get(image_url, stream=True).raw)
 
 
-def convert_image(img: Image) -> Image:
-    # This is mostly done by taking code
-    # from https://github.com/pimoroni/inky/blob/master/examples/what/dither-image-what.py
-    # It converts the image into something ths display can show
+def convert_image(img: Image, palette) -> Image:
     w, h = img.size
-    h_new = 300
+    h_new = 448
     w_new = int((float(w) / h) * h_new)
-    w_cropped = 400
+    w_cropped = 600
     img = img.resize((w_new, h_new), resample=Image.LANCZOS)
     x0 = (w_new - w_cropped) / 2
     x1 = x0 + w_cropped
     y0 = 0
     y1 = h_new
     img = img.crop((x0, y0, x1, y1))
-    pal_img = Image.new("P", (1, 1))
-    pal_img.putpalette((255, 255, 255, 0, 0, 0, 255, 0, 0) + (0, 0, 0) * 252)
-    img = img.convert("RGB").quantize(palette=pal_img)
     return img
 
 
@@ -179,12 +174,12 @@ def add_footer(
     author_font = ImageFont.truetype(SourceSerifProSemibold, font_size)
     draw.rectangle(
         [(0, height - 15), (width, height)],
-        fill=(0, 0, 0, 0),
+        fill=(255, 255, 255, 255),
     )
     draw.multiline_text(
         (5, height - 15),
         f"'{art_selection.title.strip() or 'untitled'}' by {art_selection.artist.strip() or 'unknown'} ({art_source_name})",
-        fill=(255, 255, 255, 255),
+        fill=(0, 0, 0, 0),
         font=author_font,
         align="left",
     )
@@ -192,10 +187,19 @@ def add_footer(
 
 
 def draw_image(img: Image, art_selection: Art, art_source_name: str) -> None:
-    inky_board = inky_auto()
-    img = convert_image(img)
-    add_footer(img, art_selection, art_source_name, inky_board.width, inky_board.height)
-    inky_board.set_image(img)
+    inky_board = Inky()
+    palette = hitherdither.palette.Palette(
+        inky_board._palette_blend(0.5, dtype="uint24")
+    )
+    img = convert_image(img, palette)
+    img = add_footer(
+        img, art_selection, art_source_name, inky_board.width, inky_board.height
+    )
+    img = img.convert("RGB")
+    img = hitherdither.ordered.bayer.bayer_dithering(
+        img, palette, [64, 64, 64], order=8
+    )
+    inky_board.set_image(img, saturation=0.5)
     inky_board.show()
 
 
