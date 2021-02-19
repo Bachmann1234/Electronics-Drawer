@@ -19,3 +19,9 @@ Giant Keyboard switch that can be programmed to do various keyboard tricks
 Eink displayed powered by a pi that displays art from the internet
 
 ![EInk Art Display](/eink_art_display/example_image.jpg)
+
+## Sit Stand Timer
+
+Two timers that track if my standing desk is up or down using a sonar sensor
+
+![EInk Art Display](/sitstanddesk/proto.jpg)
