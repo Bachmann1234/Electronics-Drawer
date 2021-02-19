@@ -5,6 +5,7 @@
 #define SPEED_OF_SOUND_CM_MICROSEC 29.1
 #define SIT_DISPLAY_ADDRESS 0x71
 #define STAND_DISPLAY_ADDRESS 0x70
+#define DEBOUNCE_DELAY 1000
 #define DEBUG false
 
 #include "RTClib.h"
@@ -20,9 +21,7 @@ long startTime;
 long runningTime;
 long sitTime;
 long standTime;
-int buttonState = LOW;
 long lastDebounceTime = 0;
-long debounceDelay = 1000;
 
 boolean isPaused = false;
 
@@ -141,7 +140,7 @@ void drawTimer(Adafruit_7segment display, long timerState) {
 }
 
 void updatePauseState() {
-  if ((millis() - lastDebounceTime) > debounceDelay) {
+  if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
     if (digitalRead(pausePin) == HIGH) {
       isPaused = !isPaused;
       if (DEBUG) {
