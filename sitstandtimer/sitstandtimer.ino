@@ -184,4 +184,7 @@ void loop() {
     clearDisplay(sitMatrix);
     clearDisplay(standMatrix);
   }
+  if (DEBUG) {
+    delay(1000);
+  }
 }
