@@ -24,4 +24,4 @@ Eink displayed powered by a pi that displays art from the internet
 
 Two timers that track if my standing desk is up or down using a sonar sensor
 
-![EInk Art Display](/sitstanddesk/proto.jpg)
+![Sit Stand Timer](/sitstandtimer/prototype.jpg)
