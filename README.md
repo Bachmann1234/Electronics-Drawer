@@ -18,4 +18,4 @@ Giant Keyboard switch that can be programmed to do various keyboard tricks
 
 Eink displayed powered by a pi that displays art from the internet
 
-![Giant Keyswitch](/eink_art_display/example_image.jpg)
+![EInk Art Display](/eink_art_display/example_image.jpg)
