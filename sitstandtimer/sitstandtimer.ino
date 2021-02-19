@@ -179,6 +179,10 @@ void loop() {
     }
   }
   if (isPaused && runningTime % 2 != 0) {
+    // I do this by hand
+    // I tried using the blinkrate function
+    // but I want both dispalys to blink
+    // at the same time
     clearDisplay(sitMatrix);
     clearDisplay(standMatrix);
   }
