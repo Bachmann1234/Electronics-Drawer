@@ -2,7 +2,6 @@
 #define echoPin 12
 #define pausePin 8
 #define SITTING_THRESHOLD_CM  60
-//#define SITTING_THRESHOLD_CM  10
 #define SPEED_OF_SOUND_CM_MICROSEC 29.1
 #define SIT_DISPLAY_ADDRESS 0x71
 #define STAND_DISPLAY_ADDRESS 0x70
