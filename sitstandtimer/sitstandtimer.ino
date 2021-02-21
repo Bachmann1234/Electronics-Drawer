@@ -1,14 +1,14 @@
 #define trigPin 13
 #define echoPin 12
-#define pausePin 8
-#define SITTING_THRESHOLD_CM  60
+#define pausePin 6
+#define SITTING_THRESHOLD_CM  80
 #define SPEED_OF_SOUND_CM_MICROSEC 29.1
 #define SIT_DISPLAY_ADDRESS 0x71
 #define STAND_DISPLAY_ADDRESS 0x70
 #define DEBOUNCE_DELAY 1000
 #define DEBUG false
 
-#include "RTClib.h"
+#include  "RTClib.h"
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack.h"
@@ -63,7 +63,7 @@ long readDistance() {
 }
 
 boolean isSitting(long distance) {
-  return distance > SITTING_THRESHOLD_CM;
+  return distance < SITTING_THRESHOLD_CM;
 }
 
 long updateRunningTime() {
@@ -122,16 +122,16 @@ void drawTimer(Adafruit_7segment display, long timerState) {
     Serial.print(":");
     Serial.print(seconds);
   }
-  display.drawColon(true);
   boolean drawDecinal = false;
   if (hours > 0) {
+    display.drawColon(true);
     display.writeDigitNum(0, (hours / 10), drawDecinal);
     display.writeDigitNum(1, (hours % 10), drawDecinal);
     display.writeDigitNum(3, (minutes / 10), drawDecinal);
     display.writeDigitNum(4, (minutes % 10), drawDecinal);
   } else {
     display.writeDigitNum(0, (minutes / 10), drawDecinal);
-    display.writeDigitNum(1, (minutes % 10), drawDecinal);
+    display.writeDigitNum(1, (minutes % 10), true);
     display.writeDigitNum(3, (seconds / 10), drawDecinal);
     display.writeDigitNum(4, (seconds % 10), drawDecinal);
   }
@@ -141,7 +141,7 @@ void drawTimer(Adafruit_7segment display, long timerState) {
 
 void updatePauseState() {
   if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
-    if (digitalRead(pausePin) == HIGH) {
+    if (digitalRead(pausePin) == LOW) {
       isPaused = !isPaused;
       if (DEBUG) {
         Serial.println("PAUSE HIT");
