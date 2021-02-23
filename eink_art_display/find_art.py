@@ -10,6 +10,7 @@ import hitherdither
 
 # Hitherdither is not on pypi
 # python3 -m pip install git+https://www.github.com/hbldh/hitherdither
+DOG_URL = "https://pbs.twimg.com/media/EUUsJsKXYAUC8vg?format=png&name=900x900"
 
 try:
     from inky.auto import auto as Inky
@@ -25,6 +26,18 @@ class Art:
     artist: str
     title: str
     image_url: str
+
+
+class UrlSource:
+    def __init__(self, url):
+        self.url = url
+
+    def grab_art(self) -> Art:
+        return Art(
+            "Matt Bachmann" if self.url == DOG_URL else "Unknown",
+            "Dog" if self.url == DOG_URL else "Unknown",
+            self.url,
+        )
 
 
 class Reddit:
@@ -230,24 +243,25 @@ def main():
     )
     parser.add_argument(
         "--source",
-        choices=["metro", "deviant", "reddit"],
+        choices=["metro", "deviant", "reddit", "url"],
         help="Where should I grab the art from",
     )
+    parser.add_argument(
+        "--url", help="Specific url when using the url source", default=DOG_URL
+    )
     parsed_args = parser.parse_args()
-    sources = {"metro": Metropolitan(), "deviant": Deviantart(), "reddit": Reddit()}
+    sources = {
+        "metro": Metropolitan(),
+        "deviant": Deviantart(),
+        "reddit": Reddit(),
+        "url": UrlSource(parsed_args.url),
+    }
     art_source = sources[
         parsed_args.source
         if parsed_args.source
-        else random.choice(list(sources.keys()))
+        else random.choice(list(k for k in sources.keys() if k != "url"))
     ]
     art_selection = art_source.grab_art()
-    # Stub selection so I can take a picture of this without
-    # using someone elses art
-    # art_selection = Art(
-    #     "Matt Bachmann",
-    #     "Dog",
-    #     "https://pbs.twimg.com/media/EUUsJsKXYAUC8vg?format=png&name=900x900",
-    # )
     art_source_name = art_source.__class__.__name__
     print(f"{art_source_name} - {art_selection.title} by {art_selection.artist}")
     print(art_selection.image_url)
