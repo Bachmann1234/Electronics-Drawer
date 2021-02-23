@@ -152,11 +152,9 @@ def load_image(image_url: str) -> Image:
     return Image.open(requests.get(image_url, stream=True).raw)
 
 
-def convert_image(img: Image, palette) -> Image:
+def convert_image(img: Image, w_cropped, h_new) -> Image:
     w, h = img.size
-    h_new = 448
     w_new = int((float(w) / h) * h_new)
-    w_cropped = 600
     img = img.resize((w_new, h_new), resample=Image.LANCZOS)
     x0 = (w_new - w_cropped) / 2
     x1 = x0 + w_cropped
@@ -167,19 +165,25 @@ def convert_image(img: Image, palette) -> Image:
 
 
 def add_footer(
-    img: Image, art_selection: Art, art_source_name: str, width, height
+    img: Image,
+    art_selection: Art,
+    art_source_name: str,
+    width,
+    height,
+    background_fill,
+    text_fill,
 ) -> Image:
     draw = ImageDraw.Draw(img)
     font_size = 12
     author_font = ImageFont.truetype(SourceSerifProSemibold, font_size)
     draw.rectangle(
         [(0, height - 15), (width, height)],
-        fill=(255, 255, 255, 255),
+        fill=background_fill,
     )
     draw.multiline_text(
         (5, height - 15),
         f"'{art_selection.title.strip() or 'untitled'}' by {art_selection.artist.strip() or 'unknown'} ({art_source_name})",
-        fill=(0, 0, 0, 0),
+        fill=text_fill,
         font=author_font,
         align="left",
     )
@@ -188,14 +192,20 @@ def add_footer(
 
 def draw_image(img: Image, art_selection: Art, art_source_name: str) -> None:
     inky_board = Inky()
+    img = convert_image(img, inky_board.width, inky_board.height)
+    img = add_footer(
+        img,
+        art_selection,
+        art_source_name,
+        inky_board.width,
+        inky_board.height,
+        (255, 255, 255, 255),
+        (0, 0, 0, 0),
+    )
+    img = img.convert("RGB")
     palette = hitherdither.palette.Palette(
         inky_board._palette_blend(0.5, dtype="uint24")
     )
-    img = convert_image(img, palette)
-    img = add_footer(
-        img, art_selection, art_source_name, inky_board.width, inky_board.height
-    )
-    img = img.convert("RGB")
     img = hitherdither.ordered.bayer.bayer_dithering(
         img, palette, [64, 64, 64], order=8
     )
