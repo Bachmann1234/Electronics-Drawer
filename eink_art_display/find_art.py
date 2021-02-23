@@ -9,7 +9,7 @@ from font_source_serif_pro import SourceSerifProSemibold
 import hitherdither
 
 try:
-    from inky.inky_uc8159 import Inky
+    from inky.auto import auto as Inky
 
     has_inky = True
 except ImportError:
