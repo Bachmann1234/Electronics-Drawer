@@ -1,6 +1,8 @@
-#define trigPin 13
-#define echoPin 12
-#define pausePin 6
+#define TRIG_PIN 13
+#define ECHO_PIN 12
+#define PAUSE_PIN 6
+#define SIT_LED_PIN A1
+#define STAND_LED_PIN A2
 #define SITTING_THRESHOLD_CM  80
 #define SPEED_OF_SOUND_CM_MICROSEC 29.1
 #define SIT_DISPLAY_ADDRESS 0x71
@@ -25,6 +27,12 @@ long lastDebounceTime = 0;
 
 boolean isPaused = false;
 
+enum SitState {
+  INVALID, // sonar sensor reporting out of range
+  SITTING,
+  STANDING
+};
+
 void setup() {
   Serial.begin (9600);
   if (! rtc.begin()) {
@@ -36,9 +44,11 @@ void setup() {
     Serial.println("RTC lost power, let's set the time!");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  pinMode(pausePin, INPUT);
+  pinMode(SIT_LED_PIN, OUTPUT);
+  pinMode(STAND_LED_PIN, OUTPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(PAUSE_PIN, INPUT);
   sitMatrix.begin(SIT_DISPLAY_ADDRESS);
   standMatrix.begin(STAND_DISPLAY_ADDRESS);
   startTime = rtc.now().unixtime();
@@ -49,21 +59,36 @@ void setup() {
 
 long readDistance() {
   long duration, distance;
-  digitalWrite(trigPin, LOW);
+  digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
+  digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  duration = pulseIn(echoPin, HIGH);
+  digitalWrite(TRIG_PIN, LOW);
+  duration = pulseIn(ECHO_PIN, HIGH);
   // converting the time to hit the ceiling
   // but divide by 2 since we are timing
   // hitting the ceiling and returning
   distance = (duration / 2) / SPEED_OF_SOUND_CM_MICROSEC;
+  if (DEBUG) {
+    Serial.print(distance);
+    Serial.println(" cm");
+  }
   return distance;
 }
 
-boolean isSitting(long distance) {
-  return distance < SITTING_THRESHOLD_CM;
+SitState getSitState() {
+  long distance = readDistance();
+  if (distance >= 200 || distance <= 0) {
+    if (DEBUG) {
+      Serial.println("Out of range");
+    }
+    return INVALID;
+  }
+  if (distance < SITTING_THRESHOLD_CM) {
+    return SITTING;
+  } else {
+    return STANDING;
+  }
 }
 
 long updateRunningTime() {
@@ -80,33 +105,22 @@ long updateRunningTime() {
   return secondsPassed;
 }
 
-boolean updateTimers() {
-  long distance = readDistance();
+boolean updateTimers(boolean isSitting) {
   long secondsPassed = 0;
-  if (distance >= 200 || distance <= 0) {
+  secondsPassed = updateRunningTime();
+  if (isPaused) {
+    secondsPassed = 0;
+  }
+  if (isSitting) {
     if (DEBUG) {
-      Serial.println("Out of range");
+      Serial.println("Sitting");
     }
+    sitTime += secondsPassed;
   } else {
-    secondsPassed = updateRunningTime();
-    if (isPaused) {
-      secondsPassed = 0;
-    }
     if (DEBUG) {
-      Serial.print(distance);
-      Serial.println(" cm");
+      Serial.println("Standing");
     }
-    if (isSitting(distance)) {
-      if (DEBUG) {
-        Serial.println("Sitting");
-      }
-      sitTime += secondsPassed;
-    } else {
-      if (DEBUG) {
-        Serial.println("Standing");
-      }
-      standTime += secondsPassed;
-    }
+    standTime += secondsPassed;
   }
   return secondsPassed > 0;
 }
@@ -141,7 +155,7 @@ void drawTimer(Adafruit_7segment display, long timerState) {
 
 void updatePauseState() {
   if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
-    if (digitalRead(pausePin) == LOW) {
+    if (digitalRead(PAUSE_PIN) == LOW) {
       isPaused = !isPaused;
       if (DEBUG) {
         Serial.println("PAUSE HIT");
@@ -158,9 +172,24 @@ void clearDisplay(Adafruit_7segment display) {
   display.writeDisplay();
 }
 
+void updateLeds(SitState sitState) {
+  if (sitState == SITTING) {
+    digitalWrite(SIT_LED_PIN, HIGH);
+    digitalWrite(STAND_LED_PIN, LOW);
+  } else if (sitState == STANDING) {
+    digitalWrite(SIT_LED_PIN, LOW);
+    digitalWrite(STAND_LED_PIN, HIGH);
+  } else {   
+    digitalWrite(SIT_LED_PIN, LOW);
+    digitalWrite(STAND_LED_PIN, LOW); 
+  }
+}
+
 void loop() {
   updatePauseState();
-  boolean secondsHavePassed = updateTimers();
+  SitState sitState = getSitState();
+  updateLeds(sitState);
+  boolean secondsHavePassed = updateTimers(sitState == SITTING);
   if ((secondsHavePassed && !isPaused) || (isPaused && runningTime % 2 == 0)) {
     if (DEBUG) {
       Serial.print("Sit time: ");
@@ -184,7 +213,10 @@ void loop() {
     clearDisplay(sitMatrix);
     clearDisplay(standMatrix);
   }
-  if (DEBUG) {
-    delay(1000);
-  }
+  // For reasons I do not fully understand
+  // I need a small delay here for the clock to operate
+  // properly. I think its related to the sonar sensor
+  // I did not observe this need when using an uno
+  // but do notice it with the feather
+  delay(DEBUG ? 1000 : 100);
 }
