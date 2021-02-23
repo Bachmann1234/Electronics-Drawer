@@ -25,4 +25,5 @@
 #
 # m h  dom mon dow   command
 */15 * * * * /home/pi/eink_art_display/go.sh
+# You dont neeed to run this clean on the color version
 5 0 * * * python3 Pimoroni/inky/examples/clean.py
