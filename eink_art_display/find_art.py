@@ -8,6 +8,9 @@ from requests.models import HTTPBasicAuth
 from font_source_serif_pro import SourceSerifProSemibold
 import hitherdither
 
+# Hitherdither is not on pypi
+# python3 -m pip install git+https://www.github.com/hbldh/hitherdither
+
 try:
     from inky.auto import auto as Inky
 
@@ -203,13 +206,21 @@ def draw_image(img: Image, art_selection: Art, art_source_name: str) -> None:
         (0, 0, 0, 0),
     )
     img = img.convert("RGB")
-    palette = hitherdither.palette.Palette(
-        inky_board._palette_blend(0.5, dtype="uint24")
-    )
-    img = hitherdither.ordered.bayer.bayer_dithering(
-        img, palette, [64, 64, 64], order=8
-    )
-    inky_board.set_image(img, saturation=0.5)
+    try:
+        palette = hitherdither.palette.Palette(
+            inky_board._palette_blend(0.5, dtype="uint24")
+        )
+        img = hitherdither.ordered.bayer.bayer_dithering(
+            img, palette, [64, 64, 64], order=8
+        )
+        inky_board.set_image(img, saturation=0.5)
+    except AttributeError:
+        # the inkyWHAT does not have _palette_blend
+        pal_img = Image.new("P", (1, 1))
+        pal_img.putpalette((255, 255, 255, 0, 0, 0, 255, 0, 0) + (0, 0, 0) * 252)
+        img = img.convert("RGB").quantize(palette=pal_img)
+        inky_board.set_image(img)
+
     inky_board.show()
 
 
