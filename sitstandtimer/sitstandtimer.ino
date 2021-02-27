@@ -49,6 +49,7 @@ void setup() {
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
   pinMode(PAUSE_PIN, INPUT);
+  digitalWrite(PAUSE_PIN, HIGH);
   sitMatrix.begin(SIT_DISPLAY_ADDRESS);
   standMatrix.begin(STAND_DISPLAY_ADDRESS);
   startTime = rtc.now().unixtime();
