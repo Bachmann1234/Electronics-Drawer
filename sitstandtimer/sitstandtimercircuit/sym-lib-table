@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name sitstandlib)(type Legacy)(uri ${KIPRJMOD}/sitstandlib.lib)(options "")(descr ""))
+  (lib (name sitstandtimercircuit-rescue)(type Legacy)(uri ${KIPRJMOD}/sitstandtimercircuit-rescue.lib)(options "")(descr ""))
+)
