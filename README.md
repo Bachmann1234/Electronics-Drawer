@@ -25,3 +25,9 @@ Eink displayed powered by a pi that displays art from the internet
 Two timers that track if my standing desk is up or down using a sonar sensor
 
 ![Sit Stand Timer](/sitstandtimer/prototype.jpg)
+
+## USB Morse Code Key
+
+USB Morse Code Key that can be used as an external keyboard for an android phone
+
+![USB Morse Code Key](/morse_keyboard/prototype.jpg)
