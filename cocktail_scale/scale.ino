@@ -6,14 +6,14 @@
 
 
 #define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
+#define SCREEN_HEIGHT 32
 #define OLED_RESET     -1 
 #define SCREEN_ADDRESS 0x3C
 #define BUTTON_PIN 7
-#define SCALE_DATA_PIN 2
-#define SCALE_CLOCK_PIN 3
-#define SCALE_CALIBRATION_SCALE 454.78
-#define SCALE_CALIBRATION_OFFSET 4000
+#define SCALE_DATA_PIN 4
+#define SCALE_CLOCK_PIN 5
+#define SCALE_CALIBRATION_SCALE 487.9
+#define SCALE_CALIBRATION_OFFSET 105912
 #define OZ_IN_GRAM 0.0353
 
 HX711 scale;
@@ -24,7 +24,7 @@ int lastButtonVal = LOW;
 
 void initScale() {
   scale.begin(SCALE_DATA_PIN, SCALE_CLOCK_PIN);
-  scale.tare();
+  scale.tare(10);
   scale.set_scale(SCALE_CALIBRATION_SCALE);
   scale.set_offset(SCALE_CALIBRATION_OFFSET);
 }
@@ -39,19 +39,19 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
-  
-  scale.tare();
 
 }
 
 void loop() {
   buttonVal = digitalRead(BUTTON_PIN);
   if (buttonVal == HIGH && lastButtonVal == LOW) {
-    scale.tare();
+    scale.tare(10);
   }
   lastButtonVal = buttonVal;
-  float grams = round(scale.get_units(10));
+  float grams = round(scale.get_units(2));
   drawReading(grams * OZ_IN_GRAM);
+  delay(10);
+  yield();
 }
 
 
@@ -64,7 +64,7 @@ void drawReading(float oz) {
   display.clearDisplay();
   display.setTextSize(textSize);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(24, 20);
+  display.setCursor(12, 10);
   display.println(oz, 2);
   display.display();
 }
