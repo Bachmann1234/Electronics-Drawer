@@ -105,11 +105,11 @@ class Deviantart:
         offset = 0
         results = []
         for _ in range(10):
-            popular_pieces_response = requests.get(
-                f"https://www.deviantart.com/api/v1/oauth2/browse/popular?&limit=120&offset={offset}&access_token={access_token}"
+            pieces_response = requests.get(
+                f"https://www.deviantart.com/api/v1/oauth2/browse/dailydeviations?&limit=120&offset={offset}&access_token={access_token}"
             )
-            popular_pieces_response.raise_for_status()
-            results_json = popular_pieces_response.json()
+            pieces_response.raise_for_status()
+            results_json = pieces_response.json()
             results += results_json["results"]
             if not results_json["has_more"]:
                 break
