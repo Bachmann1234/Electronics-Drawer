@@ -1,7 +1,11 @@
 import random
 import os
 import argparse
-from dataclasses import dataclass
+import time
+import json
+from datetime import datetime
+from io import BytesIO
+from dataclasses import dataclass, asdict
 import requests
 from PIL import Image, ImageFont, ImageDraw
 from requests.models import HTTPBasicAuth
@@ -11,6 +15,9 @@ import hitherdither
 # Hitherdither is not on pypi
 # python3 -m pip install git+https://www.github.com/hbldh/hitherdither
 DOG_URL = "https://pbs.twimg.com/media/EUUsJsKXYAUC8vg?format=png&name=900x900"
+MAX_ATTEMPTS = 5
+HISTORY_DIR = os.environ.get("ART_HISTORY_DIR", os.path.expanduser("~/art_history"))
+HISTORY_KEEP = int(os.environ.get("ART_HISTORY_KEEP", "50"))
 
 try:
     from inky.auto import auto as Inky
@@ -26,6 +33,8 @@ class Art:
     artist: str
     title: str
     image_url: str
+    # Where to find the piece again, for the history
+    page_url: str = ""
 
 
 class UrlSource:
@@ -36,6 +45,7 @@ class UrlSource:
         return Art(
             "Matt Bachmann" if self.url == DOG_URL else "Unknown",
             "Dog" if self.url == DOG_URL else "Unknown",
+            self.url,
             self.url,
         )
 
@@ -81,7 +91,12 @@ class Reddit:
     def grab_art(self) -> Art:
         access_token = self._get_access_token()
         piece = self._grab_random_piece(access_token)
-        return Art(piece["author"], piece["title"].split(",")[0], piece["url"])
+        return Art(
+            piece["author"],
+            piece["title"].split(",")[0],
+            piece["url"],
+            f"{self.HOST}{piece['permalink']}",
+        )
 
 
 class Deviantart:
@@ -111,7 +126,8 @@ class Deviantart:
             pieces_response.raise_for_status()
             results_json = pieces_response.json()
             results += results_json["results"]
-            if not results_json["has_more"]:
+            # has_more is sometimes true with no next_offset on the last page
+            if not results_json["has_more"] or results_json.get("next_offset") is None:
                 break
             offset = results_json["next_offset"]
         return random.choice(results)
@@ -119,8 +135,18 @@ class Deviantart:
     def grab_art(self) -> Art:
         access_token = self._get_access_token()
         piece = self._grab_random_piece(access_token)
+        # content is the full image (around 1000px), thumbs top out at 300px
+        # wide which looks soft on the 600px colour panel
+        image = piece.get("content") or piece.get("preview")
+        if not image and piece.get("thumbs"):
+            image = max(piece["thumbs"], key=lambda t: t["width"])
+        if not image:
+            raise ValueError(f"No image for {piece.get('url')}, probably literature")
         return Art(
-            piece["author"]["username"], piece["title"], piece["thumbs"][-1]["src"]
+            piece["author"]["username"],
+            piece["title"],
+            image["src"],
+            piece.get("url", ""),
         )
 
 
@@ -143,6 +169,7 @@ class Metropolitan:
             artist=object_dict["artistDisplayName"],
             title=object_dict["title"],
             image_url=object_dict["primaryImage"],
+            page_url=object_dict.get("objectURL", ""),
         )
 
     def grab_art(self) -> Art:
@@ -164,8 +191,15 @@ class Metropolitan:
         return art
 
 
-def load_image(image_url: str) -> Image:
-    return Image.open(requests.get(image_url, stream=True).raw)
+def load_image(image_url: str, width: int, height: int) -> Image:
+    response = requests.get(image_url, timeout=60)
+    response.raise_for_status()
+    # Raises if the url was not an image (e.g. a reddit gallery or link post)
+    img = Image.open(BytesIO(response.content))
+    # Let the jpeg decoder downscale huge images, resizing them is slow on a pi zero
+    img.draft("RGB", (width, height))
+    img.load()
+    return img
 
 
 def convert_image(img: Image, w_cropped, h_new) -> Image:
@@ -206,8 +240,54 @@ def add_footer(
     return img
 
 
-def draw_image(img: Image, art_selection: Art, art_source_name: str) -> None:
-    inky_board = Inky()
+def is_color(inky_board) -> bool:
+    # the inkyWHAT does not have _palette_blend
+    return hasattr(inky_board, "_palette_blend")
+
+
+def clean(inky_board) -> None:
+    """Flush the panel to reduce ghosting.
+
+    The colour panel needs this before every image. Twice, once does not seem
+    to clear it well. The wHAT only needs it now and then (cron runs it nightly).
+    """
+    if is_color(inky_board):
+        colours = [inky_board.CLEAN] * 2
+    else:
+        colours = [inky_board.RED, inky_board.BLACK, inky_board.WHITE] * 3
+    for colour in colours:
+        inky_board.set_border(colour)
+        inky_board.buf.fill(colour)
+        inky_board.show()
+        time.sleep(1)
+
+
+def save_history(img: Image, art_selection: Art, art_source_name: str) -> None:
+    """Keep the last HISTORY_KEEP images shown, so a piece I liked can be found again.
+
+    history.log gets a line per image and is never pruned, so the links outlive the images.
+    """
+    os.makedirs(HISTORY_DIR, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    img.save(os.path.join(HISTORY_DIR, f"{stamp}.png"))
+    details = {"source": art_source_name, **asdict(art_selection)}
+    with open(os.path.join(HISTORY_DIR, f"{stamp}.json"), "w") as f:
+        json.dump(details, f, indent=2)
+    with open(os.path.join(HISTORY_DIR, "history.log"), "a") as f:
+        f.write(
+            f"{stamp}\t{art_source_name}\t{art_selection.title}\t{art_selection.artist}"
+            f"\t{art_selection.page_url or art_selection.image_url}\n"
+        )
+    stamps = sorted(n[:-4] for n in os.listdir(HISTORY_DIR) if n.endswith(".png"))
+    for old in stamps[:-HISTORY_KEEP]:
+        for ext in (".png", ".json"):
+            try:
+                os.remove(os.path.join(HISTORY_DIR, old + ext))
+            except FileNotFoundError:
+                pass
+
+
+def draw_image(inky_board, img: Image, art_selection: Art, art_source_name: str) -> None:
     img = convert_image(img, inky_board.width, inky_board.height)
     img = add_footer(
         img,
@@ -219,22 +299,29 @@ def draw_image(img: Image, art_selection: Art, art_source_name: str) -> None:
         (0, 0, 0, 0),
     )
     img = img.convert("RGB")
-    try:
+    # The history keeps the undithered image, it looks more like the art
+    history_img = img
+    if is_color(inky_board):
         palette = hitherdither.palette.Palette(
             inky_board._palette_blend(0.5, dtype="uint24")
         )
         img = hitherdither.ordered.bayer.bayer_dithering(
             img, palette, [64, 64, 64], order=8
         )
+        # Only clear once the new image is ready, so a failure never leaves it blank
+        clean(inky_board)
         inky_board.set_image(img, saturation=0.5)
-    except AttributeError:
-        # the inkyWHAT does not have _palette_blend
+    else:
         pal_img = Image.new("P", (1, 1))
         pal_img.putpalette((255, 255, 255, 0, 0, 0, 255, 0, 0) + (0, 0, 0) * 252)
         img = img.convert("RGB").quantize(palette=pal_img)
         inky_board.set_image(img)
 
     inky_board.show()
+    try:
+        save_history(history_img, art_selection, art_source_name)
+    except OSError as e:
+        print(f"Could not save history: {e!r}")
 
 
 def main():
@@ -249,25 +336,43 @@ def main():
     parser.add_argument(
         "--url", help="Specific url when using the url source", default=DOG_URL
     )
+    parser.add_argument(
+        "--clean", action="store_true", help="Just clean the panel, no art"
+    )
     parsed_args = parser.parse_args()
+    inky_board = Inky() if has_inky else None
+    if parsed_args.clean:
+        clean(inky_board)
+        return
     sources = {
         "metro": Metropolitan(),
         "deviant": Deviantart(),
         "reddit": Reddit(),
         "url": UrlSource(parsed_args.url),
     }
-    art_source = sources[
-        parsed_args.source
-        if parsed_args.source
-        else random.choice(list(k for k in sources.keys() if k != "url"))
-    ]
-    art_selection = art_source.grab_art()
-    art_source_name = art_source.__class__.__name__
-    print(f"{art_source_name} - {art_selection.title} by {art_selection.artist}")
-    print(art_selection.image_url)
+    # Only picked when asked for. The met has a lot that does not look great on the displays
+    not_random = {"url", "metro"}
+    width, height = (inky_board.width, inky_board.height) if has_inky else (600, 448)
+    # Some picks are not images or fail to download, try a few before giving up
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        art_source = sources[
+            parsed_args.source
+            if parsed_args.source
+            else random.choice([k for k in sources if k not in not_random])
+        ]
+        art_source_name = art_source.__class__.__name__
+        try:
+            art_selection = art_source.grab_art()
+            print(f"{art_source_name} - {art_selection.title} by {art_selection.artist}")
+            print(art_selection.image_url)
+            image = load_image(art_selection.image_url, width, height)
+            break
+        except Exception as e:
+            print(f"Attempt {attempt} failed: {e!r}")
+            if attempt == MAX_ATTEMPTS:
+                raise
     if has_inky:
-        image = load_image(art_selection.image_url)
-        draw_image(image, art_selection, art_source_name)
+        draw_image(inky_board, image, art_selection, art_source_name)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,14 @@
 #!/bin/bash
-source /home/pi/eink_art_display/.env
-# The black and white one should not call clear
-python3 /home/pi/Pimoroni/inky/examples/7color/clear.py
-# Yes, do it twice. Once does not seem to clear it well
-python3 /home/pi/Pimoroni/inky/examples/7color/clear.py
-python3 /home/pi/eink_art_display/find_art.py
+# Run from cron, see example_crontab. Works on both displays, find_art.py
+# detects which panel it is on. Extra args go to find_art.py (e.g. --clean).
+# Expects .env next to this script and a venv made from requirements.txt.
+cd "$(dirname "$0")" || exit 1
+LOG="$HOME/art.log"
+# Keep the log small, one old copy is plenty
+if [ -f "$LOG" ] && [ "$(stat -c %s "$LOG")" -gt 1000000 ]; then
+    mv "$LOG" "$LOG.1"
+fi
+exec >>"$LOG" 2>&1
+echo "=== $(date '+%F %T') $*"
+source .env
+exec venv/bin/python find_art.py "$@"
