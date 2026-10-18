@@ -11,6 +11,7 @@ from PIL import Image, ImageFont, ImageDraw
 from requests.models import HTTPBasicAuth
 from font_source_serif_pro import SourceSerifProSemibold
 import hitherdither
+from history_page import write_history_page
 
 # Hitherdither is not on pypi
 # python3 -m pip install git+https://www.github.com/hbldh/hitherdither
@@ -266,6 +267,7 @@ def save_history(img: Image, art_selection: Art, art_source_name: str) -> None:
     """Keep the last HISTORY_KEEP images shown, so a piece I liked can be found again.
 
     history.log gets a line per image and is never pruned, so the links outlive the images.
+    index.html (history_page.py) shows them in a browser.
     """
     os.makedirs(HISTORY_DIR, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -285,6 +287,7 @@ def save_history(img: Image, art_selection: Art, art_source_name: str) -> None:
                 os.remove(os.path.join(HISTORY_DIR, old + ext))
             except FileNotFoundError:
                 pass
+    write_history_page(HISTORY_DIR)
 
 
 def draw_image(inky_board, img: Image, art_selection: Art, art_source_name: str) -> None:

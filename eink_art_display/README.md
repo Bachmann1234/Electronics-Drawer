@@ -2,7 +2,7 @@
 
 Shows random art from Reddit (r/art) and DeviantArt (Daily Deviations) on a Pimoroni Inky display. Runs on a Pi Zero W with either an Inky wHAT or an Inky Impression 7 colour; `find_art.py` works out which panel it is on.
 
-Each image shown is saved to `~/art_history` (the last 50, set with `ART_HISTORY_KEEP`), and `~/art_history/history.log` keeps a line with a link for every image ever shown.
+Each image shown is saved to `~/art_history` (the last 50, set with `ART_HISTORY_KEEP`), and `~/art_history/history.log` keeps a line with a link for every image ever shown. `index.html` there is a gallery of the saved images; the `@reboot` line in `example_crontab` serves it on `http://<pi>:8080`.
 
 ## Setup
 

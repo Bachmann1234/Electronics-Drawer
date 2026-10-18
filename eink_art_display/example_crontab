@@ -4,3 +4,5 @@
 5 0 * * * $HOME/Electronics-Drawer/eink_art_display/go.sh --clean
 # Colour (Inky Impression 7 colour): new art every 30 min, it cleans itself before each image
 # */30 * * * * $HOME/Electronics-Drawer/eink_art_display/go.sh
+# Both: serve ~/art_history (index.html is a gallery of the history) on http://<pi>:8080
+@reboot python3 -m http.server 8080 --directory $HOME/art_history >/dev/null 2>&1
